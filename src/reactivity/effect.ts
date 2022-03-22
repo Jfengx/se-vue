@@ -5,7 +5,7 @@ class ReactiveEffect {
   constructor(private fn) {}
   run() {
     activeEffect = this;
-    this.fn();
+    return this.fn();
   }
 }
 
@@ -35,6 +35,8 @@ export function trigger(target, key) {
 }
 
 export function effect(fn) {
+  // fn 相关操作全部交给 ReactiveEffect
   const effector = new ReactiveEffect(fn);
   effector.run();
+  return effector.run.bind(effector);
 }
