@@ -1,11 +1,30 @@
 let activeEffect;
 const depsDB = new Map();
 
+function cleanupEffect(effect) {
+  effect.deps.forEach((dep: any) => {
+    dep.delete(effect);
+  });
+}
+
 class ReactiveEffect {
-  constructor(private fn) {}
+  active = true;
+  deps = [];
+  constructor(private fn, public opts?) {}
   run() {
     activeEffect = this;
+    this.active = true;
     return this.fn();
+  }
+  stop() {
+    if (this.active) {
+      cleanupEffect(this);
+      this.active = false;
+
+      if (this.opts.onStop) {
+        this.opts.onStop();
+      }
+    }
   }
 }
 
@@ -22,7 +41,10 @@ export function track(target, key) {
     depsMap.set(key, deps);
   }
 
+  if (!activeEffect) return;
+
   deps.add(activeEffect);
+  activeEffect.deps.push(deps);
 }
 
 export function trigger(target, key) {
@@ -30,13 +52,25 @@ export function trigger(target, key) {
   const deps = depsMap.get(key);
 
   for (const dep of deps) {
-    dep.run();
+    if (dep.opts.schedular) {
+      dep.opts.schedular();
+    } else {
+      dep.run();
+    }
   }
 }
 
-export function effect(fn) {
+export function stop(runner) {
+  runner.effect.stop();
+}
+
+export function effect(fn, opts: any = {}) {
   // fn 相关操作全部交给 ReactiveEffect
-  const effector = new ReactiveEffect(fn);
+  const effector = new ReactiveEffect(fn, opts);
   effector.run();
-  return effector.run.bind(effector);
+
+  const runner: any = effector.run.bind(effector);
+  runner.effect = effector;
+
+  return runner;
 }
