@@ -14,3 +14,16 @@ export function reactive(raw) {
     },
   });
 }
+
+export function readonly(raw) {
+  return new Proxy(raw, {
+    get(target, key) {
+      const res = Reflect.get(target, key);
+      return res;
+    },
+    set(target, key) {
+      console.warn(`key: ${<string>key} set 失败，${target} is readonly`);
+      return true;
+    },
+  });
+}
