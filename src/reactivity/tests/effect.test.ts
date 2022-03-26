@@ -73,13 +73,12 @@ describe('effect', () => {
     expect(dummy).toBe(2);
 
     stop(runner);
-    obj.foo = 3;
+    obj.foo += 1;
     expect(dummy).toBe(2);
 
     runner();
     expect(dummy).toBe(3);
 
-    stop(runner);
     obj.foo = 4;
     expect(dummy).toBe(3);
 

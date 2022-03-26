@@ -1,10 +1,17 @@
 let activeEffect;
+let shouldTrack;
 const depsDB = new Map();
 
 function cleanupEffect(effect) {
   effect.deps.forEach((dep: any) => {
     dep.delete(effect);
   });
+
+  effect.deps.length = 0;
+}
+
+function isTracking() {
+  return shouldTrack && activeEffect !== undefined;
 }
 
 class ReactiveEffect {
@@ -12,9 +19,18 @@ class ReactiveEffect {
   deps = [];
   constructor(private fn, public opts?) {}
   run() {
+    if (!this.active) {
+      return this.fn();
+    }
+    // 可以收集依赖
     activeEffect = this;
-    this.active = true;
-    return this.fn();
+    shouldTrack = true;
+    const result = this.fn();
+
+    // 只在函数执行期内执行收集依赖
+    shouldTrack = false;
+
+    return result;
   }
   stop() {
     if (this.active) {
@@ -29,6 +45,8 @@ class ReactiveEffect {
 }
 
 export function track(target, key) {
+  if (!isTracking()) return;
+
   let depsMap = depsDB.get(target);
   if (!depsMap) {
     depsMap = new Map();
@@ -41,8 +59,8 @@ export function track(target, key) {
     depsMap.set(key, deps);
   }
 
-  if (!activeEffect) return;
-
+  // 避免 activeEffect.deps 重复收集， deps 是 Set 会自动去
+  if (deps.has(activeEffect)) return;
   deps.add(activeEffect);
   activeEffect.deps.push(deps);
 }
