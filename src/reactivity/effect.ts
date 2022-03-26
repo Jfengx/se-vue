@@ -67,6 +67,7 @@ export function track(target, key) {
 
 export function trigger(target, key) {
   const depsMap = depsDB.get(target);
+  if (!depsMap) return;
   const deps = depsMap.get(key);
 
   for (const dep of deps) {
