@@ -1,11 +1,12 @@
-import { isReactive, shallowReactive } from '../reactive';
+import { isReactive, shallowReactive, isProxy } from '../reactive';
 import { effect } from '../effect';
 
 describe('shallowReactive', () => {
   test('shallowReactive', () => {
     const v = shallowReactive({ n: { foo: 1 } });
     expect(isReactive(v)).toBe(true);
-    expect(isReactive(v.n)).toBe(undefined);
+    expect(isReactive(v.n)).toBe(false);
+    expect(isProxy(v.n)).toBe(false);
   });
 
   test('track shallowReactive', () => {
