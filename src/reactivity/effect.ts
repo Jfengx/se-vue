@@ -10,7 +10,7 @@ function cleanupEffect(effect) {
   effect.deps.length = 0;
 }
 
-class ReactiveEffect {
+export class ReactiveEffect {
   active = true;
   deps = [];
   constructor(private fn, public opts?) {}
@@ -71,7 +71,7 @@ export function track(target, key) {
 
 export function triggerEffects(deps) {
   for (const dep of deps) {
-    if (dep.opts.schedular) {
+    if (dep.opts?.schedular) {
       dep.opts.schedular();
     } else {
       dep.run();
