@@ -10,10 +10,6 @@ function cleanupEffect(effect) {
   effect.deps.length = 0;
 }
 
-function isTracking() {
-  return shouldTrack && activeEffect !== undefined;
-}
-
 class ReactiveEffect {
   active = true;
   deps = [];
@@ -44,6 +40,17 @@ class ReactiveEffect {
   }
 }
 
+export function isTracking() {
+  return shouldTrack && activeEffect !== undefined;
+}
+
+export function trackEffects(deps) {
+  // 避免 activeEffect.deps 重复收集， deps 是 Set 会自动去
+  if (deps.has(activeEffect)) return;
+  deps.add(activeEffect);
+  activeEffect.deps.push(deps);
+}
+
 export function track(target, key) {
   if (!isTracking()) return;
 
@@ -59,17 +66,10 @@ export function track(target, key) {
     depsMap.set(key, deps);
   }
 
-  // 避免 activeEffect.deps 重复收集， deps 是 Set 会自动去
-  if (deps.has(activeEffect)) return;
-  deps.add(activeEffect);
-  activeEffect.deps.push(deps);
+  trackEffects(deps);
 }
 
-export function trigger(target, key) {
-  const depsMap = depsDB.get(target);
-  if (!depsMap) return;
-  const deps = depsMap.get(key);
-
+export function triggerEffects(deps) {
   for (const dep of deps) {
     if (dep.opts.schedular) {
       dep.opts.schedular();
@@ -77,6 +77,14 @@ export function trigger(target, key) {
       dep.run();
     }
   }
+}
+
+export function trigger(target, key) {
+  const depsMap = depsDB.get(target);
+  if (!depsMap) return;
+  const deps = depsMap.get(key);
+
+  triggerEffects(deps);
 }
 
 export function stop(runner) {
