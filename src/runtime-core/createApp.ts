@@ -1,5 +1,5 @@
 import { createVNode } from './vnode';
-import { render } from './render';
+import { render } from './renderer';
 
 export function createApp(rootComponent) {
   // 全部基于 vnode （虚拟节点）操作
