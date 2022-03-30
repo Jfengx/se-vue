@@ -1,12 +1,12 @@
 import { isObject } from '../shared/index';
-import { VNODE, Component } from './vnode';
+import { VNODE } from './vnode';
+import { createComponentInstance, setupComponent } from './component';
 
 export function render(vnode, container) {
   patch(vnode, container);
 }
 
 function patch(vnode: VNODE, container: HTMLElement) {
-  debugger;
   if (typeof vnode.type === 'string') {
     // 处理 'div' 'span' 等字符串类型
     processElement(vnode, container);
@@ -49,7 +49,8 @@ function mountChildren(children: VNODE[], container: HTMLElement) {
 }
 
 function mountComponent(vnode: VNODE, container: HTMLElement) {
-  const { render } = <Component>vnode.type;
-  const subTree = render();
+  const instance = createComponentInstance(vnode);
+  setupComponent(instance);
+  const subTree = instance.render();
   patch(subTree, container);
 }
