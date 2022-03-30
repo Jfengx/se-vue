@@ -1,3 +1,4 @@
-import { App } from './app';
+import { App } from './app.js';
+import { createApp } from '../../lib/se-vue.esm.js';
 
-createApp(App).mount('#app');
+createApp(App).mount(document.querySelector('#app'));

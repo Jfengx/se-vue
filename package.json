@@ -1,14 +1,20 @@
 {
   "name": "mini-vue",
   "private": true,
+  "main": "lib/se-vue.cjs.js",
+  "module": "lib/se-vue.esm.js",
   "version": "0.0.0",
   "scripts": {
-    "test": "vitest"
+    "test": "vitest",
+    "watch": "rollup -c=rollup.config.js -w",
+    "build": "rollup -c=rollup.config.js"
   },
   "devDependencies": {
     "@types/lodash": "^4.14.180",
     "lodash": "^4.17.21",
-    "typescript": "^4.5.4",
+    "rollup": "^2.70.1",
+    "rollup-plugin-typescript2": "^0.31.2",
+    "typescript": "^4.6.2",
     "vitest": "^0.7.6"
   }
 }
