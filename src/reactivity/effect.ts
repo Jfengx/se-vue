@@ -94,7 +94,10 @@ export function stop(runner) {
 export function effect(fn, opts: any = {}) {
   // fn 相关操作全部交给 ReactiveEffect
   const effector = new ReactiveEffect(fn, opts);
-  effector.run();
+
+  if (!opts.lazy) {
+    effector.run();
+  }
 
   const runner: any = effector.run.bind(effector);
   runner.effect = effector;

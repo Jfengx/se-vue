@@ -8,6 +8,7 @@ class ComputedRefImpl {
   constructor(private _getter) {
     // 创建 effect 通知是否可以 进行 get value 操作
     this._effect = new ReactiveEffect(this._getter, {
+      lazy: true,
       schedular: () => {
         if (!this._dirty) {
           this._dirty = true;

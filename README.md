@@ -32,3 +32,7 @@
 
 - computed
   - [x] lazy
+
+- watch
+  - [x] newValue & oldValue
+  - [x] immediate
