@@ -2,13 +2,15 @@ import { h } from '../../lib/se-vue.esm.js';
 
 export const App = {
   render() {
+    window.self = this;
     return h(
       'div',
       {
         id: 'root',
         class: ['red', 'blue'],
       },
-      [h('p', {}, '第一'), h('p', {}, '第二')],
+      'hi,' + this.msg,
+      // [h('p', {}, '第一'), h('p', {}, '第二')],
     );
   },
 

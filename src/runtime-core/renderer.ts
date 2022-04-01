@@ -1,6 +1,6 @@
 import { isObject } from '../shared/index';
 import { VNODE } from './vnode';
-import { createComponentInstance, setupComponent } from './component';
+import { ComponentInstance, createComponentInstance, setupComponent } from './component';
 
 export function render(vnode, container) {
   patch(vnode, container);
@@ -25,7 +25,7 @@ function processComponent(vnode: VNODE, container: HTMLElement) {
 }
 
 function mountElement(vnode: VNODE, container: HTMLElement) {
-  const el = document.createElement(<string>vnode.type);
+  const el = (vnode.el = document.createElement(<string>vnode.type));
   const { children, props } = vnode;
 
   if (typeof children === 'string') {
@@ -51,6 +51,14 @@ function mountChildren(children: VNODE[], container: HTMLElement) {
 function mountComponent(vnode: VNODE, container: HTMLElement) {
   const instance = createComponentInstance(vnode);
   setupComponent(instance);
-  const subTree = instance.render();
+  setupRenderEffect(vnode, instance, container);
+}
+
+function setupRenderEffect(vnode: VNODE, instance: ComponentInstance, container: HTMLElement) {
+  const { proxy } = instance;
+  // proxy 代理 setup 的返回值以及 $el $date ... 属性
+  const subTree = instance.render.call(proxy);
   patch(subTree, container);
+
+  vnode.el = subTree.el;
 }
