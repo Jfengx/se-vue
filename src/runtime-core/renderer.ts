@@ -38,6 +38,11 @@ function mountElement(vnode: VNODE, container: HTMLElement) {
 
   for (const key in props) {
     const val = props[key];
+    const isOn = (key: string) => /^on[A-Z]/.test(key);
+    if (isOn(key)) {
+      const eventName = key.slice(2).toLowerCase();
+      el.addEventListener(eventName, val);
+    }
     el.setAttribute(key, val);
   }
 

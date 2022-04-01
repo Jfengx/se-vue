@@ -7,7 +7,10 @@ export const App = {
       'div',
       {
         id: 'root',
-        class: ['red', 'blue'],
+        class: 'test',
+        onClick() {
+          console.log('click');
+        },
       },
       'hi,' + this.msg,
       // [h('p', {}, '第一'), h('p', {}, '第二')],
