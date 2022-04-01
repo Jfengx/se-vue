@@ -2,6 +2,7 @@ import { VNODE, Component } from './vnode';
 import { publicInstanceProxyHandlers } from './componentPublicInstance';
 import { initProps } from './componentProps';
 import { shallowReadonly } from '../reactivity/reactive';
+import { emit } from './componentEmit';
 
 export type ComponentInstance = {
   vnode: VNODE;
@@ -10,18 +11,21 @@ export type ComponentInstance = {
   proxy: any;
   setupState: any;
   render: () => VNODE;
+  emit: (event: string) => void;
 };
 
 export function createComponentInstance(vnode: VNODE): ComponentInstance {
-  const component = {
+  const componentInstance = {
     vnode,
     type: <Component>vnode.type,
     setupState: {},
     props: null,
     proxy: null,
+    emit: <any>null,
     render: () => <any>null,
   };
-  return component;
+  componentInstance.emit = emit.bind(null, componentInstance);
+  return componentInstance;
 }
 
 export function setupComponent(instance: ComponentInstance) {
@@ -38,7 +42,7 @@ function setupStatefulComponent(instance: ComponentInstance) {
   const { setup } = component!;
 
   if (setup) {
-    const setupRes = setup(shallowReadonly(instance.props));
+    const setupRes = setup(shallowReadonly(instance.props), { emit: instance.emit });
     handleSetupRes(instance, setupRes);
   }
 }
