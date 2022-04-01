@@ -10,7 +10,7 @@ export type VNODE = {
 
 export type Component = {
   render(): VNODE;
-  setup?: () => unknown;
+  setup?: (props: any) => unknown;
 };
 
 export type ComponentType = Component | string;

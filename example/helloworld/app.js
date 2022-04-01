@@ -1,6 +1,8 @@
 import { h } from '../../lib/se-vue.esm.js';
+import { Foo } from './foo.js';
 
 export const App = {
+  name: 'App',
   render() {
     window.self = this;
     return h(
@@ -12,8 +14,7 @@ export const App = {
           console.log('click');
         },
       },
-      'hi,' + this.msg,
-      // [h('p', {}, '第一'), h('p', {}, '第二')],
+      [h('p', {}, 'hi' + this.msg), h(Foo, { count: 1 })],
     );
   },
 
