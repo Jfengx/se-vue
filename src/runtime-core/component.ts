@@ -4,6 +4,7 @@ import { initEmit as emit } from './componentEmit';
 import { initProps } from './componentProps';
 import { initSlots } from './componentSlots';
 import { publicInstanceProxyHandlers } from './componentPublicInstance';
+import { ParentComponent } from './renderer';
 
 export type Slot = (...agrs: any[]) => VNODE | VNODE[];
 
@@ -12,24 +13,28 @@ export type Slots = Record<string, Slot>;
 export type ComponentInstance = {
   vnode: VNODE;
   type: Component;
-  props: any;
+  parent: ParentComponent;
   proxy: any;
-  setupState: any;
   render: () => VNODE;
+  setupState: any;
+  props: any;
   emit: (event: string) => void;
   slots: Slots;
+  provides: Record<string, any>;
 };
 
-export function createComponentInstance(vnode: VNODE): ComponentInstance {
+export function createComponentInstance(vnode: VNODE, parent: ParentComponent): ComponentInstance {
   const componentInstance = {
     vnode,
     type: <Component>vnode.type,
+    parent,
+    proxy: null,
+    render: () => <any>null,
     setupState: {},
     props: null,
-    proxy: null,
     emit: <any>null,
     slots: {},
-    render: () => <any>null,
+    provides: Object.create(parent?.provides ?? null),
   };
   componentInstance.emit = emit.bind(null, componentInstance);
   return componentInstance;
