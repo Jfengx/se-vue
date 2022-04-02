@@ -1,4 +1,4 @@
-import { h } from '../../lib/se-vue.esm.js';
+import { h, createTextVNode } from '../../lib/se-vue.esm.js';
 import { Foo } from './foo.js';
 
 export const App = {
@@ -10,7 +10,7 @@ export const App = {
       Foo,
       {},
       {
-        header: (props) => h('p', {}, 'header' + props.age),
+        header: (props) => [h('p', {}, 'header' + props.age), createTextVNode('我是 textnode')],
         footer: (props) => h('p', {}, 'footer'),
       },
     );

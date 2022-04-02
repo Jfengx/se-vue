@@ -1,4 +1,4 @@
-import { VNODE, Fragment } from './vnode';
+import { VNODE, Fragment, Text } from './vnode';
 import { ComponentInstance, createComponentInstance, setupComponent } from './component';
 import { ShapeFlags } from '../shared/shapeFlags';
 
@@ -13,6 +13,9 @@ function patch(vnode: VNODE, container: HTMLElement) {
     // Fragment 只渲染 children
     case Fragment:
       processFragment(vnode, container);
+      break;
+    case Text:
+      processText(vnode, container);
       break;
     default:
       if (shapeFlag & ShapeFlags.ELEMENT) {
@@ -36,6 +39,11 @@ function processComponent(vnode: VNODE, container: HTMLElement) {
 
 function processFragment(vnode: VNODE, container: HTMLElement) {
   mountChildren(<VNODE[]>vnode.children, container);
+}
+
+function processText(vnode: VNODE, container: HTMLElement) {
+  const el = document.createTextNode(<string>vnode.children);
+  container.append(el);
 }
 
 function mountElement(vnode: VNODE, container: HTMLElement) {
