@@ -1,4 +1,4 @@
-import { VNODE } from './vnode';
+import { VNODE, Fragment } from './vnode';
 import { ComponentInstance, createComponentInstance, setupComponent } from './component';
 import { ShapeFlags } from '../shared/shapeFlags';
 
@@ -7,14 +7,22 @@ export function render(vnode, container) {
 }
 
 function patch(vnode: VNODE, container: HTMLElement) {
-  const { shapeFlag } = vnode;
+  const { shapeFlag, type } = vnode;
 
-  if (shapeFlag & ShapeFlags.ELEMENT) {
-    // 处理 'div' 'span' 等字符串类型
-    processElement(vnode, container);
-  } else if (shapeFlag & ShapeFlags.STATEFUL_COMPONENT) {
-    // 处理 Component 类型
-    processComponent(vnode, container);
+  switch (type) {
+    // Fragment 只渲染 children
+    case Fragment:
+      processFragment(vnode, container);
+      break;
+    default:
+      if (shapeFlag & ShapeFlags.ELEMENT) {
+        // 处理 'div' 'span' 等字符串类型
+        processElement(vnode, container);
+      } else if (shapeFlag & ShapeFlags.STATEFUL_COMPONENT) {
+        // 处理 Component 类型
+        processComponent(vnode, container);
+      }
+      break;
   }
 }
 
@@ -24,6 +32,10 @@ function processElement(vnode: VNODE, container) {
 
 function processComponent(vnode: VNODE, container: HTMLElement) {
   mountComponent(vnode, container);
+}
+
+function processFragment(vnode: VNODE, container: HTMLElement) {
+  mountChildren(<VNODE[]>vnode.children, container);
 }
 
 function mountElement(vnode: VNODE, container: HTMLElement) {

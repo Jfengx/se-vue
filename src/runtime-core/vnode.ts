@@ -1,7 +1,7 @@
 import { ShapeFlag, ShapeFlags } from '../shared/shapeFlags';
 import { Slots } from './component';
 
-type CHILDREN = null | string | VNODE[] | Slots;
+export type CHILDREN = null | string | VNODE[] | Slots;
 
 export type VNODE = {
   type: ComponentType;
@@ -16,7 +16,9 @@ export type Component = {
   setup?: (props: any, context: { emit: (event: string, ...args: any[]) => void }) => unknown;
 };
 
-export type ComponentType = Component | string;
+export type ComponentType = Component | string | symbol;
+
+export const Fragment = Symbol('Fragment');
 
 export function createVNode(type: ComponentType, props?, children?): VNODE {
   const vnode = {
