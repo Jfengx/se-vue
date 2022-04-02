@@ -1,9 +1,12 @@
 import { ShapeFlag, ShapeFlags } from '../shared/shapeFlags';
+import { Slots } from './component';
+
+type CHILDREN = null | string | VNODE[] | Slots;
 
 export type VNODE = {
   type: ComponentType;
   props: Record<string, any>;
-  children: null | string | VNODE[];
+  children: CHILDREN;
   el: null | HTMLElement;
   shapeFlag: ShapeFlag;
 };
@@ -28,6 +31,12 @@ export function createVNode(type: ComponentType, props?, children?): VNODE {
     vnode.shapeFlag |= ShapeFlags.TEXT_CHILDREN;
   } else if (Array.isArray(children)) {
     vnode.shapeFlag |= ShapeFlags.ARRAY_CHILDREN;
+  }
+
+  if (vnode.shapeFlag & ShapeFlags.STATEFUL_COMPONENT) {
+    if (typeof children === 'object') {
+      vnode.shapeFlag |= ShapeFlags.SLOTS_CHILDREN;
+    }
   }
 
   return vnode;

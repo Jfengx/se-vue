@@ -1,8 +1,13 @@
-import { VNODE, Component } from './vnode';
-import { publicInstanceProxyHandlers } from './componentPublicInstance';
-import { initProps } from './componentProps';
 import { shallowReadonly } from '../reactivity/reactive';
-import { emit } from './componentEmit';
+import { VNODE, Component } from './vnode';
+import { initEmit as emit } from './componentEmit';
+import { initProps } from './componentProps';
+import { initSlots } from './componentSlots';
+import { publicInstanceProxyHandlers } from './componentPublicInstance';
+
+export type Slot = (...agrs: any[]) => VNODE | VNODE[];
+
+export type Slots = Record<string, Slot>;
 
 export type ComponentInstance = {
   vnode: VNODE;
@@ -12,6 +17,7 @@ export type ComponentInstance = {
   setupState: any;
   render: () => VNODE;
   emit: (event: string) => void;
+  slots: Slots;
 };
 
 export function createComponentInstance(vnode: VNODE): ComponentInstance {
@@ -22,6 +28,7 @@ export function createComponentInstance(vnode: VNODE): ComponentInstance {
     props: null,
     proxy: null,
     emit: <any>null,
+    slots: {},
     render: () => <any>null,
   };
   componentInstance.emit = emit.bind(null, componentInstance);
@@ -30,7 +37,7 @@ export function createComponentInstance(vnode: VNODE): ComponentInstance {
 
 export function setupComponent(instance: ComponentInstance) {
   initProps(instance, instance.vnode.props);
-  // initSlots
+  initSlots(instance, <Slots>instance.vnode.children);
   setupStatefulComponent(instance);
 }
 
