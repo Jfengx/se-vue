@@ -1,13 +1,14 @@
 import { ShapeFlag, ShapeFlags } from '../shared/shapeFlags';
 import { Slots } from './component';
+import { RendererNode } from './renderer';
 
 export type CHILDREN = null | string | VNODE[] | Slots;
 
-export type VNODE = {
+export type VNODE<HostElement = RendererNode> = {
   type: ComponentType;
   props: Record<string, any>;
   children: CHILDREN;
-  el: null | HTMLElement;
+  el: null | HostElement;
   shapeFlag: ShapeFlag;
 };
 

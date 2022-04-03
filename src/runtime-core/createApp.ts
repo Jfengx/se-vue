@@ -1,12 +1,13 @@
-import { createVNode } from './vnode';
-import { render } from './renderer';
+import { createVNode, Component } from './vnode';
+import { RenderFunc, RendererNode } from './renderer';
 
-export function createApp(rootComponent) {
-  // 全部基于 vnode （虚拟节点）操作
-  return {
-    mount(root: HTMLElement) {
-      const vnode = createVNode(rootComponent);
-      render(vnode, root);
-    },
+export function createAppAPI<HostElement = RendererNode>(render: RenderFunc<HostElement>) {
+  return function createApp(rootComponent: Component) {
+    return {
+      mount(root: HostElement) {
+        const vnode = createVNode(rootComponent);
+        render(vnode, root);
+      },
+    };
   };
 }
