@@ -23,10 +23,20 @@ function insert(el: HTMLElement, container: HTMLElement) {
   container.appendChild(el);
 }
 
-const renderer = createRender({
+function remove(el: HTMLElement, container: HTMLElement) {
+  container.removeChild(el);
+}
+
+function setElementText(el: HTMLElement, text: string) {
+  el.textContent = text;
+}
+
+const renderer = createRender<HTMLElement>({
   createElement,
   patchProp,
   insert,
+  remove,
+  setElementText,
 });
 
 export function createApp(rootComponent: Component) {

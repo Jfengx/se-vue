@@ -16,6 +16,8 @@ export type RenderOptions<HostElement> = {
   createElement: (type: string) => HostElement;
   patchProp: (el: HostElement, key: string, oldValue: any, newValue: any) => void;
   insert: (el: HostElement, container: HostElement) => void;
+  remove: (el: HostElement, container: HostElement) => void;
+  setElementText: (el: HostElement, text: string) => void;
 };
 
 export type RenderFunc<HostElement> = (
@@ -27,7 +29,13 @@ export type RenderFunc<HostElement> = (
 export type ParentComponent = ComponentInstance | undefined;
 
 export function createRender<HostElement = RendererNode>(options: RenderOptions<HostElement>) {
-  const { createElement, patchProp: hostPatchProps, insert } = options;
+  const {
+    createElement: hostCreateElement,
+    patchProp: hostPatchProps,
+    insert: hostInsert,
+    remove: hostRemove,
+    setElementText: hostSetElementText,
+  } = options;
 
   function render(vnode: VNODE, container: HostElement, parentComponent?: ParentComponent) {
     patch(null, vnode, container, parentComponent);
@@ -100,11 +108,11 @@ export function createRender<HostElement = RendererNode>(options: RenderOptions<
   function processText(n1: Nullable<VNODE>, n2: VNODE, container: HostElement) {
     // TODO
     const el: unknown = document.createTextNode(<string>n2.children);
-    insert(<HostElement>el, container);
+    hostInsert(<HostElement>el, container);
   }
 
   function mountElement(n2: VNODE, container: HostElement, parentComponent: ParentComponent) {
-    const el = (n2.el = createElement(<string>n2.type));
+    const el = (n2.el = hostCreateElement(<string>n2.type));
     const { children, props, shapeFlag } = n2;
 
     if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
@@ -118,7 +126,7 @@ export function createRender<HostElement = RendererNode>(options: RenderOptions<
       hostPatchProps(el, key, null, val);
     }
 
-    insert(el, container);
+    hostInsert(el, container);
   }
 
   function mountChildren(
@@ -143,11 +151,12 @@ export function createRender<HostElement = RendererNode>(options: RenderOptions<
     // 如何获取el，走 patchElement 即 n1 已经渲染好，所以 el 即为 n1.el
     const el = (n2.el = n1.el);
     patchProps(<HostElement>el, oldProps, newProps);
+    patchChildren(n1, n2, parentComponent);
   }
 
-  // 更新 props，类名啊，数据啊 。。。 的更新
+  // 更新 props，dom为例，即dom的attributes，对应到组件上（onXXX func, props data）
   function patchProps(el: HostElement, oldProps, newProps) {
-    // 更新 props
+    // 更新 props[xxx]
     for (const key in newProps) {
       const oldV = oldProps[key];
       const newV = newProps[key];
@@ -155,13 +164,47 @@ export function createRender<HostElement = RendererNode>(options: RenderOptions<
         hostPatchProps(el, key, oldV, newV);
       }
     }
-    // 删除 props
+    // 删除 props[xxx]
     if (oldProps !== EMPTY_OBJ) {
       for (const key in oldProps) {
         if (!(key in newProps)) {
           hostPatchProps(el, key, oldProps[key], null);
         }
       }
+    }
+  }
+
+  // 更新 子节点
+  function patchChildren(n1: VNODE, n2: VNODE, parentComponent: ParentComponent) {
+    const { shapeFlag: oldFlag, el, children: c1 } = n1;
+    const { shapeFlag: newFlag, children: c2 } = n2;
+
+    // array | text -> text
+    if (newFlag & ShapeFlags.TEXT_CHILDREN) {
+      if (oldFlag & ShapeFlags.ARRAY_CHILDREN) {
+        // 清空之前的子元素，以渲染好 children[x].el 是有 HostElement 挂载的
+        unmountChildren(<VNODE[]>c1, <HostElement>el);
+      }
+      if (c1 !== c2) {
+        // 设置 text
+        hostSetElementText(<HostElement>el, <string>c2);
+      }
+    } else {
+      // text | array -> array
+      if (newFlag & ShapeFlags.ARRAY_CHILDREN) {
+        if (oldFlag & ShapeFlags.TEXT_CHILDREN) {
+          hostSetElementText(<HostElement>el, '');
+          mountChildren(<VNODE[]>c2, <HostElement>el, parentComponent);
+        }
+      }
+    }
+  }
+
+  // 移除 VNODE[] 子元素
+  function unmountChildren(children: VNODE[], container: HostElement) {
+    for (let i = 0; i < children.length; i += 1) {
+      const el = children[i].el;
+      hostRemove(<HostElement>el, container);
     }
   }
 
