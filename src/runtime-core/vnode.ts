@@ -2,14 +2,15 @@ import { ShapeFlag, ShapeFlags } from '../shared/shapeFlags';
 import { Slots } from './component';
 import { RendererNode } from './renderer';
 
-export type CHILDREN = null | string | VNODE[] | Slots;
+export type CHILDREN<HostElement> = null | string | VNODE<HostElement>[] | Slots;
 
 export type VNODE<HostElement = RendererNode> = {
   type: ComponentType;
   props: Record<string, any>;
-  children: CHILDREN;
+  children: CHILDREN<HostElement>;
   el: null | HostElement;
   shapeFlag: ShapeFlag;
+  key: any;
 };
 
 export type Component = {
@@ -22,13 +23,18 @@ export type ComponentType = Component | string | symbol;
 export const Fragment = Symbol('Fragment');
 export const Text = Symbol('Text');
 
-export function createVNode(type: ComponentType, props?, children?): VNODE {
+export function createVNode<HostElement = RendererNode>(
+  type: ComponentType,
+  props?,
+  children?,
+): VNODE<HostElement> {
   const vnode = {
     type,
     props,
     children,
     el: null,
     shapeFlag: getShapeFlag(type),
+    key: props && props.key,
   };
 
   if (typeof children === 'string') {

@@ -4,29 +4,32 @@ import { initEmit as emit } from './componentEmit';
 import { initProps } from './componentProps';
 import { initSlots } from './componentSlots';
 import { publicInstanceProxyHandlers } from './componentPublicInstance';
-import { ParentComponent, Nullable } from './renderer';
+import { ParentComponent, Nullable, RendererNode } from './renderer';
 import { proxyRefs } from '../reactivity/ref';
 
 export type Slot = (...agrs: any[]) => VNODE | VNODE[];
 
 export type Slots = Record<string, Slot>;
 
-export type ComponentInstance = {
-  vnode: VNODE;
+export type ComponentInstance<HostElement = RendererNode> = {
+  vnode: VNODE<HostElement>;
   type: Component;
   parent: ParentComponent;
   proxy: any;
-  render: () => VNODE;
+  render: () => VNODE<HostElement>;
   setupState: any;
   props: any;
   emit: (event: string) => void;
   slots: Slots;
   provides: Record<string, any>;
   isMounted: boolean;
-  subTree: Nullable<VNODE>;
+  subTree: Nullable<VNODE<HostElement>>;
 };
 
-export function createComponentInstance(vnode: VNODE, parent: ParentComponent): ComponentInstance {
+export function createComponentInstance<HostElement = RendererNode>(
+  vnode: VNODE<HostElement>,
+  parent: ParentComponent,
+): ComponentInstance<HostElement> {
   const componentInstance = {
     vnode,
     type: <Component>vnode.type,

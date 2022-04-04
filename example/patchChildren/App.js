@@ -11,8 +11,8 @@ export const App = {
       { id: 'root', class: ['red', 'black'] },
       // [h(ArrayToText)],
       // [h(TextToText)],
-      [h(TextToArray)],
-      // [h(ArrayToArray)],
+      // [h(TextToArray)],
+      [h(ArrayToArray)],
     );
   },
   setup() {

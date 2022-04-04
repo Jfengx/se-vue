@@ -1,4 +1,4 @@
-import { createRender } from '../runtime-core/renderer';
+import { createRender, Nullable } from '../runtime-core/renderer';
 import { Component } from '../runtime-core/vnode';
 
 function createElement(type: string) {
@@ -19,12 +19,15 @@ function patchProp(el: HTMLElement, key: string, oldValue: any, newValue: any) {
   );
 }
 
-function insert(el: HTMLElement, container: HTMLElement) {
-  container.appendChild(el);
+function insert(el: HTMLElement, container: HTMLElement, anchor: Nullable<HTMLElement>) {
+  container.insertBefore(el, anchor);
 }
 
-function remove(el: HTMLElement, container: HTMLElement) {
-  container.removeChild(el);
+function remove(el: HTMLElement) {
+  const parent = el.parentNode;
+  if (parent) {
+    parent.removeChild(el);
+  }
 }
 
 function setElementText(el: HTMLElement, text: string) {

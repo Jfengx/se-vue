@@ -5,8 +5,8 @@ export function createAppAPI<HostElement = RendererNode>(render: RenderFunc<Host
   return function createApp(rootComponent: Component) {
     return {
       mount(root: HostElement) {
-        const vnode = createVNode(rootComponent);
-        render(vnode, root);
+        const vnode = createVNode<HostElement>(rootComponent);
+        render(vnode, root, null);
       },
     };
   };
