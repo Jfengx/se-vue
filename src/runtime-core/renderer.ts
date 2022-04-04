@@ -2,6 +2,10 @@ import { VNODE, Fragment, Text } from './vnode';
 import { ComponentInstance, createComponentInstance, setupComponent } from './component';
 import { ShapeFlags } from '../shared/shapeFlags';
 import { createAppAPI } from './createApp';
+import { effect } from '../reactivity/effect';
+import { EMPTY_OBJ } from '../shared';
+
+export type Nullable<T> = T | null;
 
 // 一切皆对象 🐶
 export interface RendererNode {
@@ -10,7 +14,7 @@ export interface RendererNode {
 
 export type RenderOptions<HostElement> = {
   createElement: (type: string) => HostElement;
-  patchProp: (el: HostElement, key: string, propValue: any) => void;
+  patchProp: (el: HostElement, key: string, oldValue: any, newValue: any) => void;
   insert: (el: HostElement, container: HostElement) => void;
 };
 
@@ -23,64 +27,87 @@ export type RenderFunc<HostElement> = (
 export type ParentComponent = ComponentInstance | undefined;
 
 export function createRender<HostElement = RendererNode>(options: RenderOptions<HostElement>) {
-  const { createElement, patchProp, insert } = options;
+  const { createElement, patchProp: hostPatchProps, insert } = options;
 
-  function render(vnode, container: HostElement, parentComponent?: ParentComponent) {
-    patch(vnode, container, parentComponent);
+  function render(vnode: VNODE, container: HostElement, parentComponent?: ParentComponent) {
+    patch(null, vnode, container, parentComponent);
   }
 
-  function patch(vnode: VNODE, container: HostElement, parentComponent: ParentComponent) {
-    const { shapeFlag, type } = vnode;
+  /**
+   * @param n1 old VNODE
+   * @param n2 new VNODE
+   */
+  function patch(
+    n1: Nullable<VNODE>,
+    n2: VNODE,
+    container: HostElement,
+    parentComponent: ParentComponent,
+  ) {
+    const { shapeFlag, type } = n2;
 
     switch (type) {
       // Fragment 只渲染 children
       case Fragment:
-        processFragment(vnode, container, parentComponent);
+        processFragment(n1, n2, container, parentComponent);
         break;
       // Text 只渲染 string
       case Text:
-        processText(vnode, container);
+        processText(n1, n2, container);
         break;
       default:
         if (shapeFlag & ShapeFlags.ELEMENT) {
           // 处理 'div' 'span' 等字符串类型
-          processElement(vnode, container, parentComponent);
+          processElement(n1, n2, container, parentComponent);
         } else if (shapeFlag & ShapeFlags.STATEFUL_COMPONENT) {
           // 处理 Component 类型
-          processComponent(vnode, container, parentComponent);
+          processComponent(n1, n2, container, parentComponent);
         }
         break;
     }
   }
 
-  function processElement(vnode: VNODE, container: HostElement, parentComponent: ParentComponent) {
-    mountElement(vnode, container, parentComponent);
-  }
-
-  function processComponent(
-    vnode: VNODE,
+  function processElement(
+    n1: Nullable<VNODE>,
+    n2: VNODE,
     container: HostElement,
     parentComponent: ParentComponent,
   ) {
-    mountComponent(vnode, container, parentComponent);
+    if (!n1) {
+      mountElement(n2, container, parentComponent);
+    } else {
+      patchElement(n1, n2, container, parentComponent);
+    }
   }
 
-  function processFragment(vnode: VNODE, container: HostElement, parentComponent: ParentComponent) {
-    mountChildren(<VNODE[]>vnode.children, container, parentComponent);
+  function processComponent(
+    n1: Nullable<VNODE>,
+    n2: VNODE,
+    container: HostElement,
+    parentComponent: ParentComponent,
+  ) {
+    mountComponent(n1, n2, container, parentComponent);
   }
 
-  function processText(vnode: VNODE, container: HostElement) {
+  function processFragment(
+    n1: Nullable<VNODE>,
+    n2: VNODE,
+    container: HostElement,
+    parentComponent: ParentComponent,
+  ) {
+    mountChildren(<VNODE[]>n2.children, container, parentComponent);
+  }
+
+  function processText(n1: Nullable<VNODE>, n2: VNODE, container: HostElement) {
     // TODO
-    const el: unknown = document.createTextNode(<string>vnode.children);
+    const el: unknown = document.createTextNode(<string>n2.children);
     insert(<HostElement>el, container);
   }
 
-  function mountElement(vnode: VNODE, container: HostElement, parentComponent: ParentComponent) {
-    const el = (vnode.el = createElement(<string>vnode.type));
-    const { children, props, shapeFlag } = vnode;
+  function mountElement(n2: VNODE, container: HostElement, parentComponent: ParentComponent) {
+    const el = (n2.el = createElement(<string>n2.type));
+    const { children, props, shapeFlag } = n2;
 
     if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
-      // TODO
       el['textContent'] = <string>children;
     } else if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
       mountChildren(<VNODE[]>children, el, parentComponent);
@@ -88,7 +115,7 @@ export function createRender<HostElement = RendererNode>(options: RenderOptions<
 
     for (const key in props) {
       const val = props[key];
-      patchProp(el, key, val);
+      hostPatchProps(el, key, null, val);
     }
 
     insert(el, container);
@@ -100,23 +127,72 @@ export function createRender<HostElement = RendererNode>(options: RenderOptions<
     parentComponent: ParentComponent,
   ) {
     children.forEach((child) => {
-      patch(child, container, parentComponent);
+      patch(null, child, container, parentComponent);
     });
   }
 
-  function mountComponent(vnode: VNODE, container: HostElement, parentComponent: ParentComponent) {
-    const instance = createComponentInstance(vnode, parentComponent);
+  function patchElement(
+    n1: VNODE,
+    n2: VNODE,
+    container: HostElement,
+    parentComponent: ParentComponent,
+  ) {
+    const oldProps = n1.props || EMPTY_OBJ;
+    const newProps = n2.props || EMPTY_OBJ;
+
+    // 如何获取el，走 patchElement 即 n1 已经渲染好，所以 el 即为 n1.el
+    const el = (n2.el = n1.el);
+    patchProps(<HostElement>el, oldProps, newProps);
+  }
+
+  // 更新 props，类名啊，数据啊 。。。 的更新
+  function patchProps(el: HostElement, oldProps, newProps) {
+    // 更新 props
+    for (const key in newProps) {
+      const oldV = oldProps[key];
+      const newV = newProps[key];
+      if (oldV !== newV) {
+        hostPatchProps(el, key, oldV, newV);
+      }
+    }
+    // 删除 props
+    if (oldProps !== EMPTY_OBJ) {
+      for (const key in oldProps) {
+        if (!(key in newProps)) {
+          hostPatchProps(el, key, oldProps[key], null);
+        }
+      }
+    }
+  }
+
+  function mountComponent(
+    n1: Nullable<VNODE>,
+    n2: VNODE,
+    container: HostElement,
+    parentComponent: ParentComponent,
+  ) {
+    const instance = createComponentInstance(n2, parentComponent);
     setupComponent(instance);
-    setupRenderEffect(vnode, instance, container);
+    setupRenderEffect(n2, instance, container);
   }
 
   function setupRenderEffect(vnode: VNODE, instance: ComponentInstance, container: HostElement) {
-    const { proxy } = instance;
-    // proxy 代理 setup 的返回值以及 $el $date ... 属性
-    const subTree = instance.render.call(proxy);
-    patch(subTree, container, instance);
+    effect(() => {
+      const { proxy } = instance;
+      // proxy 代理 setup 的返回值以及 $el $date ... 属性
+      const subTree = instance.render.call(proxy);
 
-    vnode.el = subTree.el;
+      if (!instance.isMounted) {
+        patch(null, subTree, container, instance);
+        instance.isMounted = true;
+      } else {
+        const prevTree = instance.subTree;
+        patch(prevTree, subTree, container, instance);
+      }
+
+      instance.subTree = subTree;
+      vnode.el = subTree.el;
+    });
   }
 
   return {

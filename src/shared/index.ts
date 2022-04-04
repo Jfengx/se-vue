@@ -10,3 +10,5 @@ export const camelize = (str: string) =>
   str.replace(/\-(\w)/g, (_, c) => (c ? c.toUpperCase() : ''));
 
 export const toHandleKey = (str: string) => (str ? `on${capitalize(str)}` : 'on');
+
+export const EMPTY_OBJ = {};

@@ -4,7 +4,8 @@ import { initEmit as emit } from './componentEmit';
 import { initProps } from './componentProps';
 import { initSlots } from './componentSlots';
 import { publicInstanceProxyHandlers } from './componentPublicInstance';
-import { ParentComponent } from './renderer';
+import { ParentComponent, Nullable } from './renderer';
+import { proxyRefs } from '../reactivity/ref';
 
 export type Slot = (...agrs: any[]) => VNODE | VNODE[];
 
@@ -21,6 +22,8 @@ export type ComponentInstance = {
   emit: (event: string) => void;
   slots: Slots;
   provides: Record<string, any>;
+  isMounted: boolean;
+  subTree: Nullable<VNODE>;
 };
 
 export function createComponentInstance(vnode: VNODE, parent: ParentComponent): ComponentInstance {
@@ -35,6 +38,8 @@ export function createComponentInstance(vnode: VNODE, parent: ParentComponent): 
     emit: <any>null,
     slots: {},
     provides: Object.create(parent?.provides ?? null),
+    isMounted: false,
+    subTree: null,
   };
   componentInstance.emit = emit.bind(null, componentInstance);
   return componentInstance;
@@ -63,7 +68,7 @@ function setupStatefulComponent(instance: ComponentInstance) {
 
 function handleSetupRes(instance: ComponentInstance, setupRes) {
   if (typeof setupRes === 'object') {
-    instance.setupState = setupRes;
+    instance.setupState = proxyRefs(setupRes);
   }
 
   finishComponentSetup(instance);
