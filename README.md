@@ -37,3 +37,25 @@
 - watch
   - [x] newValue & oldValue
   - [x] immediate
+
+### runtime-core
+
+- render
+  - [x] custom renderer
+
+- components
+  - [x] events
+  - [x] props
+  - [x] emits
+  - [x] slots
+  - [x] fragment
+  - [x] textNode
+  - [x] getCurrentInstance
+  - [x] provide & inject
+  - [x] update
+    - [x] props
+    - [x] children
+      - [x] text -> text
+      - [x] text -> array
+      - [x] array -> text
+      - [x] array -> array !!!
