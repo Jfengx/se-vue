@@ -291,7 +291,85 @@ export function createRender<HostElement = RendererNode>(options: RenderOptions<
       }
     } else {
       // 中间部分
-      // TODO
+      // 1. 删除多余的节点（即 c2 有，c1 无）
+      // 2. 更新两者都有的节点（c2，c1 重合部分）
+      // 3. 调整重合节点的顺序 同时 创建新增的点
+      const s1 = i;
+      const s2 = i;
+      const toBePatched = e2 - s2 + 1;
+      let patched = 0;
+
+      // 存储新数组对应旧数组的下标，以便调整顺序
+      const newIndexToOldIndexMap = Array(toBePatched).fill(0);
+      // 用来优化，判断是否需要 move
+      let moved = false;
+      let maxNewIndexSoFar = 0;
+
+      const keyToIndexMap = new Map();
+      // 获取 c2 的 key，使用 Map 优化查询
+      for (let i = s2; i <= e2; i += 1) {
+        keyToIndexMap.set(c2[i].key, i);
+      }
+
+      let newIndex;
+      for (let i = s1; i <= e1; i += 1) {
+        const prevChild = c1[i];
+
+        if (patched >= toBePatched) {
+          hostRemove(c1[i].el!);
+          continue;
+        }
+
+        if (prevChild.key != null) {
+          // Map 查询
+          newIndex = keyToIndexMap.get(prevChild.key);
+        } else {
+          // 遍历查询
+          for (let j = s2; j <= e2; j += 1) {
+            if (isSameVNodeValue(prevChild, c2[j])) {
+              newIndex = j;
+              break;
+            }
+          }
+        }
+
+        if (newIndex !== undefined) {
+          if (newIndex >= maxNewIndexSoFar) {
+            maxNewIndexSoFar = newIndex;
+          } else {
+            moved = false;
+          }
+          // !! 更新下标，+1 防止为 0，0 代表的是 c2 有，c1 无的项
+          newIndexToOldIndexMap[newIndex - s2] = i + 1;
+          // 更新相同节点
+          patch(prevChild, c2[newIndex], container, parentComponent, null);
+          patched += 1;
+        } else {
+          // 删除更新后不存在节点
+          hostRemove(prevChild.el!);
+        }
+      }
+
+      // 得出 最长递增项 的下标
+      const increasingNewIndexSequence = moved ? getSequence(newIndexToOldIndexMap) : [];
+      // 根据 increasingNewIndexSequence 找出需要移动的项
+      let j = increasingNewIndexSequence.length - 1;
+      for (let i = toBePatched - 1; i >= 0; i -= 1) {
+        const nextIndex = i + s2;
+        const nextChild = c2[nextIndex]!;
+        const anchor = nextIndex + 1 < l2 ? c2[nextIndex + 1].el : null;
+
+        // 若该点没有则新建，然后插入
+        if (newIndexToOldIndexMap[i] === 0) {
+          patch(null, nextChild, container, parentComponent, anchor);
+        } else if (moved) {
+          if (j < 0 || i !== increasingNewIndexSequence[j]) {
+            hostInsert(nextChild.el!, container, anchor);
+          } else {
+            j--;
+          }
+        }
+      }
     }
   }
 
@@ -343,4 +421,67 @@ export function createRender<HostElement = RendererNode>(options: RenderOptions<
   return {
     createApp: createAppAPI(render),
   };
+}
+
+// 求 最长递增子序列在原数组的下标 数组
+function getSequence(arr: number[]): number[] {
+  // 浅拷贝arr
+  const _arr = arr.slice();
+  const len = _arr.length;
+  // 存储最长递增子序列对应arr中下标
+  const result = [0];
+
+  for (let i = 0; i < len; i++) {
+    const val = _arr[i];
+
+    // 排除等于 0 的情况
+    if (val !== 0) {
+      /* 1. 贪心算法 */
+
+      // 获取result当前最大值的下标
+      const j = result[result.length - 1];
+      // 如果当前 val 大于当前递增子序列的最大值的时候，直接添加
+      if (arr[j] < val) {
+        _arr[i] = j; // 保存上一次递增子序列最后一个值的索引
+        result.push(i);
+        continue;
+      }
+
+      /* 2. 二分法 */
+
+      // 定义二分法查找区间 [left, right]
+      let left = 0;
+      let right = result.length - 1;
+      while (left < right) {
+        // 求中间值（向下取整）
+        const mid = (left + right) >> 1;
+        if (arr[result[mid]] < val) left = mid + 1;
+        else right = mid;
+      }
+
+      // 当前递增子序列按顺序找到第一个大于 val 的值，将其替换
+      if (val < arr[result[left]]) {
+        if (left > 0) {
+          // 保存上一次递增子序列最后一个值的索引
+          _arr[i] = result[left - 1];
+        }
+
+        // 此时有可能导致结果不正确，即 result[left + 1] < result[left]
+        // 所以我们需要通过 _arr 来记录正常的结果
+        result[left] = i;
+      }
+    }
+  }
+
+  // 修正贪心算法可能造成最长递增子序列在原数组里不是正确的顺序
+  let len2 = result.length;
+  let idx = result[len2 - 1];
+  // 倒序回溯，通过之前 _arr 记录的上一次递增子序列最后一个值的索引
+  // 进而找到最终正确的索引
+  while (len2-- > 0) {
+    result[len2] = idx;
+    idx = _arr[idx];
+  }
+
+  return result;
 }
