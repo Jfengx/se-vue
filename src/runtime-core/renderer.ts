@@ -337,7 +337,7 @@ export function createRender<HostElement = RendererNode>(options: RenderOptions<
           if (newIndex >= maxNewIndexSoFar) {
             maxNewIndexSoFar = newIndex;
           } else {
-            moved = false;
+            moved = true;
           }
           // !! 更新下标，+1 防止为 0，0 代表的是 c2 有，c1 无的项
           newIndexToOldIndexMap[newIndex - s2] = i + 1;
