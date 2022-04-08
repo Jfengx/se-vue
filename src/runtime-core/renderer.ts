@@ -4,6 +4,7 @@ import { ShapeFlags } from '../shared/shapeFlags';
 import { createAppAPI } from './createApp';
 import { effect } from '../reactivity/effect';
 import { EMPTY_OBJ } from '../shared';
+import { queueJobs } from './scheduler';
 
 export type Nullable<T> = T | null;
 
@@ -399,23 +400,33 @@ export function createRender<HostElement = RendererNode>(options: RenderOptions<
     container: HostElement,
     anchor: Nullable<HostElement>,
   ) {
-    effect(() => {
-      const { proxy } = instance;
-      // proxy 代理 setup 的返回值以及 $el $date ... 属性
-      const subTree = instance.render.call(proxy);
+    instance.update = effect(
+      () => {
+        const { proxy } = instance;
+        // proxy 代理 setup 的返回值以及 $el $date ... 属性
+        const subTree = instance.render.call(proxy);
 
-      if (!instance.isMounted) {
-        patch(null, subTree, container, instance, anchor);
-        instance.isMounted = true;
-      } else {
-        console.log('patch');
-        const prevTree = instance.subTree;
-        patch(prevTree, subTree, container, instance, anchor);
-      }
+        if (!instance.isMounted) {
+          console.log('Component -> init');
 
-      instance.subTree = subTree;
-      vnode.el = subTree.el;
-    });
+          patch(null, subTree, container, instance, anchor);
+          instance.isMounted = true;
+        } else {
+          console.log('Component -> patch');
+          const prevTree = instance.subTree;
+          patch(prevTree, subTree, container, instance, anchor);
+        }
+
+        instance.subTree = subTree;
+        vnode.el = subTree.el;
+      },
+      {
+        schedular: () => {
+          console.log('update - scheduler');
+          queueJobs(instance.update);
+        },
+      },
+    );
   }
 
   return {
