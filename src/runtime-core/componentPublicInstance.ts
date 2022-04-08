@@ -3,6 +3,7 @@ import { ComponentInstance } from './component';
 const publicPropertiesMap = {
   $el: (i: ComponentInstance) => i.vnode.el,
   $slots: (i: ComponentInstance) => i.slots,
+  $props: (i: ComponentInstance) => i.props,
 };
 
 function hasOwn(val: {}, key: string) {

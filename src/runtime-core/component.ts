@@ -24,6 +24,7 @@ export type ComponentInstance<HostElement = RendererNode> = {
   provides: Record<string, any>;
   isMounted: boolean;
   subTree: Nullable<VNODE<HostElement>>;
+  next: Nullable<VNODE>;
   // TODO: type
   update: any;
 };
@@ -45,6 +46,7 @@ export function createComponentInstance<HostElement = RendererNode>(
     provides: Object.create(parent?.provides ?? null),
     isMounted: false,
     subTree: null,
+    next: null,
     update: null,
   };
   componentInstance.emit = emit.bind(null, componentInstance);

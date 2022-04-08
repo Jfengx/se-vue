@@ -1,5 +1,5 @@
 import { ShapeFlag, ShapeFlags } from '../shared/shapeFlags';
-import { Slots } from './component';
+import { Slots, ComponentInstance } from './component';
 import { RendererNode } from './renderer';
 
 export type CHILDREN<HostElement> = null | string | VNODE<HostElement>[] | Slots;
@@ -11,6 +11,7 @@ export type VNODE<HostElement = RendererNode> = {
   el: null | HostElement;
   shapeFlag: ShapeFlag;
   key: any;
+  component: ComponentInstance;
 };
 
 export type Component = {
@@ -35,6 +36,7 @@ export function createVNode<HostElement = RendererNode>(
     el: null,
     shapeFlag: getShapeFlag(type),
     key: props && props.key,
+    component: <any>null,
   };
 
   if (typeof children === 'string') {

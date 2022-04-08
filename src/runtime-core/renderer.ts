@@ -5,6 +5,7 @@ import { createAppAPI } from './createApp';
 import { effect } from '../reactivity/effect';
 import { EMPTY_OBJ } from '../shared';
 import { queueJobs } from './scheduler';
+import { shouldUpdateComponent } from './componentUpdateUtils';
 
 export type Nullable<T> = T | null;
 
@@ -101,23 +102,11 @@ export function createRender<HostElement = RendererNode>(options: RenderOptions<
     parentComponent: ParentComponent,
     anchor: Nullable<HostElement>,
   ) {
-    mountComponent(n1, n2, container, parentComponent, anchor);
-  }
-
-  function processFragment(
-    n1: Nullable<VNODE<HostElement>>,
-    n2: VNODE<HostElement>,
-    container: HostElement,
-    parentComponent: ParentComponent,
-    anchor: Nullable<HostElement>,
-  ) {
-    mountChildren(<VNODE<HostElement>[]>n2.children, container, parentComponent, anchor);
-  }
-
-  function processText(n1: Nullable<VNODE>, n2: VNODE, container: HostElement) {
-    // TODO
-    const el: unknown = document.createTextNode(<string>n2.children);
-    hostInsert(<HostElement>el!, container, null);
+    if (!n1) {
+      mountComponent(n2, container, parentComponent, anchor);
+    } else {
+      updateComponent(n1, n2);
+    }
   }
 
   function mountElement(
@@ -141,6 +130,17 @@ export function createRender<HostElement = RendererNode>(options: RenderOptions<
     }
 
     hostInsert(el, container, anchor);
+  }
+
+  function mountComponent(
+    n2: VNODE<HostElement>,
+    container: HostElement,
+    parentComponent: ParentComponent,
+    anchor: Nullable<HostElement>,
+  ) {
+    const instance = (n2.component = createComponentInstance(n2, parentComponent));
+    setupComponent(instance);
+    setupRenderEffect(n2, instance, container, anchor);
   }
 
   function mountChildren(
@@ -205,7 +205,7 @@ export function createRender<HostElement = RendererNode>(options: RenderOptions<
     if (newFlag & ShapeFlags.TEXT_CHILDREN) {
       if (oldFlag & ShapeFlags.ARRAY_CHILDREN) {
         // 清空之前的子元素，以渲染好 children[x].el 是有 HostElement 挂载的
-        unmountChildren(<VNODE<HostElement>[]>c1, el!);
+        unmountChildren(<VNODE<HostElement>[]>c1);
       }
       if (c1 !== c2) {
         // 设置 text
@@ -375,23 +375,22 @@ export function createRender<HostElement = RendererNode>(options: RenderOptions<
   }
 
   // 移除 VNODE[] 子元素
-  function unmountChildren(children: VNODE<HostElement>[], container: HostElement) {
+  function unmountChildren(children: VNODE<HostElement>[]) {
     for (let i = 0; i < children.length; i += 1) {
       const el = children[i].el;
       hostRemove(el!);
     }
   }
 
-  function mountComponent(
-    n1: Nullable<VNODE<HostElement>>,
-    n2: VNODE<HostElement>,
-    container: HostElement,
-    parentComponent: ParentComponent,
-    anchor: Nullable<HostElement>,
-  ) {
-    const instance = createComponentInstance(n2, parentComponent);
-    setupComponent(instance);
-    setupRenderEffect(n2, instance, container, anchor);
+  function updateComponent(n1: VNODE<HostElement>, n2: VNODE<HostElement>) {
+    const instance = (n2.component = n1.component);
+    if (shouldUpdateComponent(n1, n2)) {
+      instance.next = n2;
+      instance.update();
+    } else {
+      n2.el = n1.el;
+      instance!.vnode = n2;
+    }
   }
 
   function setupRenderEffect(
@@ -402,23 +401,29 @@ export function createRender<HostElement = RendererNode>(options: RenderOptions<
   ) {
     instance.update = effect(
       () => {
-        const { proxy } = instance;
-        // proxy 代理 setup 的返回值以及 $el $date ... 属性
-        const subTree = instance.render.call(proxy);
-
         if (!instance.isMounted) {
           console.log('Component -> init');
-
+          const { proxy } = instance;
+          // proxy 代理 setup 的返回值以及 $el $date ... 属性
+          const subTree = (instance.subTree = instance.render.call(proxy));
           patch(null, subTree, container, instance, anchor);
+          vnode.el = subTree.el;
           instance.isMounted = true;
         } else {
           console.log('Component -> patch');
+          // 需要一个 vnode
+          const { next, vnode } = instance;
+          if (next) {
+            next.el = vnode.el;
+            updateComponentPreRender(instance, next);
+          }
+          const { proxy } = instance;
+          // proxy 代理 setup 的返回值以及 $el $date ... 属性
+          const subTree = instance.render.call(proxy);
           const prevTree = instance.subTree;
+          instance.subTree = subTree;
           patch(prevTree, subTree, container, instance, anchor);
         }
-
-        instance.subTree = subTree;
-        vnode.el = subTree.el;
       },
       {
         schedular: () => {
@@ -427,6 +432,30 @@ export function createRender<HostElement = RendererNode>(options: RenderOptions<
         },
       },
     );
+  }
+
+  function updateComponentPreRender(instance: ComponentInstance, nextVNode: VNODE) {
+    instance.vnode = nextVNode;
+    instance.next = null;
+    instance.props = nextVNode.props;
+  }
+
+  // Fragment
+  function processFragment(
+    n1: Nullable<VNODE<HostElement>>,
+    n2: VNODE<HostElement>,
+    container: HostElement,
+    parentComponent: ParentComponent,
+    anchor: Nullable<HostElement>,
+  ) {
+    mountChildren(<VNODE<HostElement>[]>n2.children, container, parentComponent, anchor);
+  }
+
+  // TextNode
+  function processText(n1: Nullable<VNODE>, n2: VNODE, container: HostElement) {
+    // TODO
+    const el: unknown = document.createTextNode(<string>n2.children);
+    hostInsert(<HostElement>el!, container, null);
   }
 
   return {
