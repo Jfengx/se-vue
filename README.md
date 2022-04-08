@@ -59,5 +59,5 @@
       - [x] text -> array
       - [x] array -> text
       - [x] array -> array !!!
-      - [ ] components
+    - [x] components
   - [x] nextTick
