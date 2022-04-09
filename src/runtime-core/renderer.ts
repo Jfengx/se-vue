@@ -393,6 +393,12 @@ export function createRender<HostElement = RendererNode>(options: RenderOptions<
     }
   }
 
+  function updateComponentPreRender(instance: ComponentInstance, nextVNode: VNODE) {
+    instance.vnode = nextVNode;
+    instance.next = null;
+    instance.props = nextVNode.props;
+  }
+
   function setupRenderEffect(
     vnode: VNODE<HostElement>,
     instance: ComponentInstance<HostElement>,
@@ -432,12 +438,6 @@ export function createRender<HostElement = RendererNode>(options: RenderOptions<
         },
       },
     );
-  }
-
-  function updateComponentPreRender(instance: ComponentInstance, nextVNode: VNODE) {
-    instance.vnode = nextVNode;
-    instance.next = null;
-    instance.props = nextVNode.props;
   }
 
   // Fragment
