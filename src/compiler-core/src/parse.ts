@@ -61,11 +61,11 @@ function parseInterpolation(context) {
   const closeDelimiter = '}}';
 
   const closeIndex = context.source.indexOf(closeDelimiter, closeDelimiter.length);
-  // 去 openDelimiter
+  // 删除 {{
   advanceBy(context, openDelimiter.length);
   // 获取 xxx 内容长度
   const rawContentLength = closeIndex - openDelimiter.length;
-  // 获取 xxx 并删除 {{ xxx
+  // 获取 xxx 并删除 xxx
   const rawContent = parseTextData(context, rawContentLength);
   const content = rawContent.trim();
   // 继续推进删除 去除 }}
