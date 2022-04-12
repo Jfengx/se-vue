@@ -1,11 +1,4 @@
-import { NodeTypes } from './ast';
-
-type ASTNode = {
-  type: number;
-  tag?: string;
-  content?: any;
-  children: ASTNode[];
-};
+import { NodeTypes, ASTNode } from './ast';
 
 type ParserContext = {
   source: string;

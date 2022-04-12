@@ -4,3 +4,10 @@ export const enum NodeTypes {
   ELEMENT,
   TEXT,
 }
+
+export type ASTNode = {
+  type?: number;
+  tag?: string;
+  content?: any;
+  children: ASTNode[];
+};

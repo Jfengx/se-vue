@@ -12,3 +12,5 @@ export const camelize = (str: string) =>
 export const toHandleKey = (str: string) => (str ? `on${capitalize(str)}` : 'on');
 
 export const EMPTY_OBJ = {};
+
+export const isArray = (val) => Array.isArray(val);
