@@ -1,62 +1,76 @@
 import { NodeTypes } from './ast';
 
+type ASTNode = {
+  type: number;
+  tag?: string;
+  content?: any;
+  children: ASTNode[];
+};
+
+type ParserContext = {
+  source: string;
+};
+
 const enum TagType {
   Start,
   End,
 }
 
-export function baseParse(content: string) {
-  const context = createContext(content);
-
-  const children = createRoot(parseChildren(context));
-
-  return children;
+// </div> => div
+function startWithTagOpen(source: string, tag: string) {
+  return (
+    source.startsWith('</') && source.slice(2, 2 + tag.length).toLowerCase() === tag.toLowerCase()
+  );
 }
 
-function createContext(content: string) {
-  return {
-    source: content,
-  };
-}
+function isEnd(context: ParserContext, ancestors: ASTNode[]) {
+  const s = context.source;
 
-function createRoot(children) {
-  return {
-    children,
-  };
+  if (s.startsWith('</')) {
+    for (let i = ancestors.length - 1; i >= 0; i--) {
+      const tag = ancestors[i].tag!;
+      if (startWithTagOpen(context.source, tag)) {
+        return true;
+      }
+    }
+  }
+
+  return !s;
 }
 
 // 获取需要的东西
 // 删除处理完的东西，继续推进
-function parseChildren(context) {
-  let node;
-  const s = context.source;
-
-  if (s.startsWith('{{')) {
-    // interpolation
-    node = parseInterpolation(context);
-  } else if (s[0] === '<') {
-    if (/[a-z]/i.test(s[1])) {
-      // element
-      node = parseElement(context);
-    }
-  } else {
-    // text
-    node = parseText(context);
-  }
-
+function parseChildren(context: ParserContext, ancestors: ASTNode[]) {
   const nodes: any = [];
-  nodes.push(node);
+  while (!isEnd(context, ancestors)) {
+    let node;
+    const s = context.source;
+
+    if (s.startsWith('{{')) {
+      // interpolation
+      node = parseInterpolation(context);
+    } else if (s[0] === '<') {
+      if (/[a-z]/i.test(s[1])) {
+        // element
+        node = parseElement(context, ancestors);
+      }
+    } else {
+      // text
+      node = parseText(context);
+    }
+    nodes.push(node);
+  }
 
   return nodes;
 }
 
 // 删除 -> 推进
-function advanceBy(context, length: number) {
+function advanceBy(context: ParserContext, length: number) {
   context.source = context.source.slice(length);
 }
 
 // 处理 插值 {{ xxx }}
-function parseInterpolation(context) {
+function parseInterpolation(context: ParserContext) {
   const openDelimiter = '{{';
   const closeDelimiter = '}}';
 
@@ -81,20 +95,30 @@ function parseInterpolation(context) {
 }
 
 // 处理 element <div></div>
-function parseElement(context) {
+function parseElement(context: ParserContext, ancestors: ASTNode[]) {
   // 删头 <div> 并提取 tag
-  const element = parseTag(context, TagType.Start);
-  // 删尾 </div>
-  parseTag(context, TagType.End);
+  const element: any = parseTag(context, TagType.Start);
+  // 获取中间内容
+  ancestors.push(element);
+  element.children = parseChildren(context, ancestors);
+  ancestors.pop();
+  if (startWithTagOpen(context.source, element.tag)) {
+    // 删尾 </div>
+    parseTag(context, TagType.End);
+  } else {
+    throw new Error(`缺少结束标签：${element.tag}`);
+  }
+
   return element;
 }
 
-function parseTag(context, type) {
+function parseTag(context: ParserContext, type: number) {
   // 解析 tag
   const match: any = /^<\/?([a-z]*)/i.exec(context.source);
   const tag = match[1];
   // 删除解析完成的 <div></div>
-  advanceBy(context, match[0].length + 1);
+  advanceBy(context, match[0].length);
+  advanceBy(context, 1);
 
   if (type === TagType.End) return;
 
@@ -104,8 +128,20 @@ function parseTag(context, type) {
   };
 }
 
-function parseText(context) {
-  const content = parseTextData(context, context.source.length);
+function parseText(context: ParserContext) {
+  const endTokens = ['<', '{{'];
+
+  let endIndex = context.source.length;
+
+  for (let i = 0; i <= endTokens.length; i++) {
+    const index = context.source.indexOf(endTokens[i]);
+    // 取小的
+    if (endIndex > index && index !== -1) {
+      endIndex = index;
+    }
+  }
+
+  const content = parseTextData(context, endIndex);
 
   return {
     type: NodeTypes.TEXT,
@@ -113,11 +149,29 @@ function parseText(context) {
   };
 }
 
-function parseTextData(context, length: number) {
+function parseTextData(context: ParserContext, length: number) {
   // 获取 content
   const content = context.source.slice(0, length);
   // 推进
   advanceBy(context, content.length);
 
   return content;
+}
+
+function createContext(content: string): ParserContext {
+  return {
+    source: content,
+  };
+}
+
+function createRoot(children: ASTNode[]) {
+  return {
+    children,
+  };
+}
+
+export function baseParse(content: string) {
+  const context = createContext(content);
+  const children = createRoot(parseChildren(context, []));
+  return children;
 }
