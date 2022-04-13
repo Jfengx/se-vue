@@ -1,5 +1,11 @@
-import { ASTNode, RootNode } from './ast';
+import { ASTNode, NodeTypes } from './ast';
 import { isArray } from '../../shared/index';
+import { TO_DISPLAY_STRING } from './runtimeHelpers';
+
+export type RootNode = ASTNode & {
+  codegenNode?: any;
+  helpers?: any;
+};
 
 type NodeTransforms<T> = (node: T) => void | ((node: T) => void)[];
 
@@ -9,9 +15,11 @@ type TransformOptions = {
 
 type TransformContext = {
   root: ASTNode;
+  helpers: Map<any, number>;
+  helper: (s: any) => void;
 } & TransformOptions;
 
-function traverse(node: RootNode, context: TransformContext) {
+function traverseNode(node: RootNode, context: TransformContext) {
   // handle nodeTransforms
   const { nodeTransforms } = context;
 
@@ -26,16 +34,24 @@ function traverse(node: RootNode, context: TransformContext) {
     }
   }
 
-  traveserChildren(node, context);
+  switch (node.type) {
+    case NodeTypes.INTERPOLATION:
+      context.helper(TO_DISPLAY_STRING);
+      break;
+    case NodeTypes.ROOT:
+    case NodeTypes.ELEMENT:
+      traveserChildren(node, context);
+      break;
+    default:
+      break;
+  }
 }
 
 function traveserChildren(node: RootNode, context: TransformContext) {
   const { children } = node;
-  if (children) {
-    for (let i = 0; i < children.length; i++) {
-      const node = children[i];
-      traverse(node, context);
-    }
+  for (let i = 0; i < children.length; i++) {
+    const node = children[i];
+    traverseNode(node, context);
   }
 }
 
@@ -45,14 +61,20 @@ function createCodeCodegen(node: RootNode) {
 }
 
 function createTransformContext(root: RootNode, options: TransformOptions) {
-  return {
+  const context = {
     root,
-    nodeTransforms: options.nodeTransforms || [],
+    nodeTransforms: options.nodeTransforms || undefined,
+    helpers: new Map(),
+    helper(key) {
+      context.helpers.set(key, 1);
+    },
   };
+  return context;
 }
 
 export function transform(root: RootNode, options: TransformOptions = {}) {
   const context = createTransformContext(root, options);
-  traverse(root, <TransformContext>context);
+  traverseNode(root, <TransformContext>context);
   createCodeCodegen(root);
+  root.helpers = [...context.helpers.keys()];
 }

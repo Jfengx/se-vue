@@ -159,6 +159,7 @@ function createContext(content: string): ParserContext {
 
 function createRoot(children: ASTNode[]) {
   return {
+    type: NodeTypes.ROOT,
     children,
   };
 }

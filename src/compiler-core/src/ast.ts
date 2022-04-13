@@ -3,6 +3,7 @@ export const enum NodeTypes {
   SIMPLE_EXPRESSION,
   ELEMENT,
   TEXT,
+  ROOT,
 }
 
 export type ASTNode = {
@@ -10,8 +11,4 @@ export type ASTNode = {
   tag?: string;
   content?: any;
   children: ASTNode[];
-};
-
-export type RootNode = ASTNode & {
-  codegenNode?: any;
 };
