@@ -1,18 +1,17 @@
-import { ASTNode } from './ast';
+import { ASTNode, RootNode } from './ast';
 import { isArray } from '../../shared/index';
 
 type NodeTransforms<T> = (node: T) => void | ((node: T) => void)[];
 
 type TransformOptions = {
-  nodeTransforms: NodeTransforms<ASTNode>;
+  nodeTransforms?: NodeTransforms<ASTNode>;
 };
 
 type TransformContext = {
   root: ASTNode;
-  nodeTransforms: NodeTransforms<ASTNode>;
-};
+} & TransformOptions;
 
-function traverse(node: ASTNode, context: TransformContext) {
+function traverse(node: RootNode, context: TransformContext) {
   // handle nodeTransforms
   const { nodeTransforms } = context;
 
@@ -30,7 +29,7 @@ function traverse(node: ASTNode, context: TransformContext) {
   traveserChildren(node, context);
 }
 
-function traveserChildren(node: ASTNode, context: TransformContext) {
+function traveserChildren(node: RootNode, context: TransformContext) {
   const { children } = node;
   if (children) {
     for (let i = 0; i < children.length; i++) {
@@ -40,14 +39,20 @@ function traveserChildren(node: ASTNode, context: TransformContext) {
   }
 }
 
-function createTransformContext(root: ASTNode, options: TransformOptions) {
+// TODO 现在只拿了第一个
+function createCodeCodegen(node: RootNode) {
+  node.codegenNode = node.children[0];
+}
+
+function createTransformContext(root: RootNode, options: TransformOptions) {
   return {
     root,
     nodeTransforms: options.nodeTransforms || [],
   };
 }
 
-export function transform(root: ASTNode, options) {
+export function transform(root: RootNode, options: TransformOptions = {}) {
   const context = createTransformContext(root, options);
-  traverse(root, context);
+  traverse(root, <TransformContext>context);
+  createCodeCodegen(root);
 }

@@ -11,3 +11,7 @@ export type ASTNode = {
   content?: any;
   children: ASTNode[];
 };
+
+export type RootNode = ASTNode & {
+  codegenNode?: any;
+};
