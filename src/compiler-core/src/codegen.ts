@@ -1,6 +1,7 @@
 import { NodeTypes, ASTNode } from './ast';
-import { helperMapName, TO_DISPLAY_STRING } from './runtimeHelpers';
-import { RootNode } from './transform';
+import { helperMapName, TO_DISPLAY_STRING, CREATE_ELEMENT_VNODE } from './runtimeHelpers';
+import { AstNode } from './transform';
+import { isString } from '../../shared/index';
 
 type CodegenContext = {
   code: string;
@@ -22,7 +23,7 @@ function createCodegenContext(): CodegenContext {
   return context;
 }
 
-export function generate(ast: RootNode) {
+export function generate(ast: AstNode) {
   const context = createCodegenContext();
   const { push } = context;
 
@@ -46,19 +47,19 @@ export function generate(ast: RootNode) {
 
 // 外部 helpers 引入
 // const { toDisplayString: _toDisplayString } = _Vue
-function genFunctionPreamble(ast: RootNode, context: CodegenContext) {
+function genFunctionPreamble(ast: AstNode, context: CodegenContext) {
   const { push } = context;
   const VueBinging = 'Vue';
   const aliasHelper = (source: string) => `${helperMapName[source]}: _${helperMapName[source]}`;
-  if (ast.helpers.length > 0) {
-    push(`const { ${ast.helpers.map(aliasHelper).join(' ,')} } = _${VueBinging}\n`);
+  if (ast.helpers && ast.helpers.length > 0) {
+    push(`const { ${ast.helpers.map(aliasHelper).join(', ')} } = _${VueBinging}\n`);
   }
 }
 
 // 生成 string
 function genText(node: ASTNode, context: CodegenContext) {
   const { push } = context;
-  push(`'${node.content}'`);
+  push(`"${node.content}"`);
 }
 
 // 生成 interpolation
@@ -72,9 +73,33 @@ function genInterpolation(node: ASTNode, context: CodegenContext) {
 
 // 生成 interpolation simple_expression
 function genExpression(node: ASTNode, context: CodegenContext) {
-  console.log(node);
   const { push } = context;
   push(`${node.content}`);
+}
+
+// 生成 element
+function genElement(node: ASTNode, context: CodegenContext) {
+  const { push, helper } = context;
+  const { tag, children, props } = node;
+
+  push(helper(CREATE_ELEMENT_VNODE));
+  push(`(`);
+  genNodeList(genNullable([tag, props, children]), context);
+  push(')');
+}
+
+// 处理 text + interpolation
+function genCompound(node: ASTNode, context: CodegenContext) {
+  const { children } = node;
+  const { push } = context;
+  for (let i = 0; i < children.length; i++) {
+    const child = children[i];
+    if (isString(child)) {
+      push(<any>child);
+    } else {
+      genNode(child, context);
+    }
+  }
 }
 
 // 生成 返回值
@@ -89,7 +114,33 @@ function genNode(node: ASTNode, context: CodegenContext) {
     case NodeTypes.SIMPLE_EXPRESSION:
       genExpression(node, context);
       break;
+    case NodeTypes.ELEMENT:
+      genElement(node, context);
+      break;
+    case NodeTypes.COMPOUND_EXPRESSION:
+      genCompound(node, context);
+      break;
     default:
       break;
   }
+}
+
+function genNodeList(nodes: ASTNode[], context: CodegenContext) {
+  const { push } = context;
+  for (let i = 0; i < nodes.length; i++) {
+    const node = nodes[i];
+    if (isString(node)) {
+      push(<any>node);
+    } else {
+      genNode(node, context);
+    }
+
+    if (i < nodes.length - 1) {
+      push(', ');
+    }
+  }
+}
+
+function genNullable(arr) {
+  return arr.map((v) => v || 'null');
 }

@@ -14,3 +14,5 @@ export const toHandleKey = (str: string) => (str ? `on${capitalize(str)}` : 'on'
 export const EMPTY_OBJ = {};
 
 export const isArray = (val) => Array.isArray(val);
+
+export const isString = (val) => typeof val === 'string';

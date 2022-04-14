@@ -2,35 +2,31 @@ import { ASTNode, NodeTypes } from './ast';
 import { isArray } from '../../shared/index';
 import { TO_DISPLAY_STRING } from './runtimeHelpers';
 
-export type RootNode = ASTNode & {
-  codegenNode?: any;
-  helpers?: any;
-};
-
-type NodeTransforms<T> = (node: T) => void | ((node: T) => void)[];
-
-type TransformOptions = {
-  nodeTransforms?: NodeTransforms<ASTNode>;
-};
-
-type TransformContext = {
+export type TransformContext = {
   root: ASTNode;
   helpers: Map<any, number>;
   helper: (s: any) => void;
 } & TransformOptions;
 
-function traverseNode(node: RootNode, context: TransformContext) {
+type NodeTransforms<T, U> = (node: T, context: U) => void | ((node: T, context: U) => void)[];
+
+type TransformOptions = {
+  nodeTransforms?: NodeTransforms<ASTNode, TransformContext>;
+};
+
+function traverseNode(node: ASTNode, context: TransformContext) {
   // handle nodeTransforms
   const { nodeTransforms } = context;
-
+  const exitFns: any = [];
   if (nodeTransforms) {
     if (isArray(nodeTransforms)) {
       for (let i = 0; i < nodeTransforms.length; i++) {
         const transform = nodeTransforms[i];
-        transform(node);
+        const onExit = transform(node, context);
+        if (onExit) exitFns.push(onExit);
       }
     } else {
-      nodeTransforms(node);
+      nodeTransforms(node, context);
     }
   }
 
@@ -45,9 +41,14 @@ function traverseNode(node: RootNode, context: TransformContext) {
     default:
       break;
   }
+
+  let i = exitFns.length;
+  while (i--) {
+    exitFns[i]();
+  }
 }
 
-function traveserChildren(node: RootNode, context: TransformContext) {
+function traveserChildren(node: ASTNode, context: TransformContext) {
   const { children } = node;
   for (let i = 0; i < children.length; i++) {
     const node = children[i];
@@ -55,12 +56,18 @@ function traveserChildren(node: RootNode, context: TransformContext) {
   }
 }
 
-// TODO 现在只拿了第一个
-function createCodeCodegen(node: RootNode) {
-  node.codegenNode = node.children[0];
+// TODO 现在只拿了第一个，处理不止一个的情况
+// children['text', Element] 时不会处理 Element
+function createCodeCodegen(node: ASTNode) {
+  const child = node.children[0];
+  if (child.type === NodeTypes.ELEMENT) {
+    node.codegenNode = child.codegenNode;
+  } else {
+    node.codegenNode = child;
+  }
 }
 
-function createTransformContext(root: RootNode, options: TransformOptions) {
+function createTransformContext(root: ASTNode, options: TransformOptions) {
   const context = {
     root,
     nodeTransforms: options.nodeTransforms || undefined,
@@ -72,7 +79,7 @@ function createTransformContext(root: RootNode, options: TransformOptions) {
   return context;
 }
 
-export function transform(root: RootNode, options: TransformOptions = {}) {
+export function transform(root: ASTNode, options: TransformOptions = {}) {
   const context = createTransformContext(root, options);
   traverseNode(root, <TransformContext>context);
   createCodeCodegen(root);
