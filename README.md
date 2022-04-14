@@ -61,3 +61,25 @@
       - [x] array -> array !!!
     - [x] components
   - [x] nextTick
+
+### compiler-core
+
+- parse
+  - [x] interpolation
+  - [x] element
+  - [x] text
+  - [x] union ↑
+- transform
+  - [x] traverse
+  - [x] custom options
+- generate
+  - [x] string
+  - [x] interpolation
+  - [x] element
+  - [x] union ↑
+    - [x] compound -> string + interpolation
+
+### TODO
+
+- compiler-core
+  - [ ] 所有 children[0] 的地方扩展
