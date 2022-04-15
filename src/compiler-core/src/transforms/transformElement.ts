@@ -1,7 +1,7 @@
 import { ASTNode, createVNodeCall, NodeTypes } from '../ast';
-import { TransformContext, AstNode } from '../transform';
+import { TransformContext } from '../transform';
 
-export function transformElement(node: AstNode, context: TransformContext) {
+export function transformElement(node: ASTNode, context: TransformContext) {
   if (node.type === NodeTypes.ELEMENT) {
     return () => {
       // 中间处理层

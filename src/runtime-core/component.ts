@@ -16,7 +16,7 @@ export type ComponentInstance<HostElement = RendererNode> = {
   type: Component;
   parent: ParentComponent;
   proxy: any;
-  render: () => VNODE<HostElement>;
+  render: (val: any) => VNODE<HostElement>;
   setupState: any;
   props: any;
   emit: (event: string) => void;
@@ -84,6 +84,12 @@ function handleSetupRes(instance: ComponentInstance, setupRes) {
 
 function finishComponentSetup(instance: ComponentInstance) {
   const component = instance.type;
+  // render 优先级高于 template
+  if (compiler && !component.render) {
+    if (component.template) {
+      component.render = compiler(component.template);
+    }
+  }
   instance.render = component.render;
 }
 
@@ -94,4 +100,10 @@ export function setCurrentInstance(instance: ComponentInstance | null) {
 }
 export function getCurrentInstance(): ComponentInstance | null {
   return currentInstance;
+}
+
+let compiler;
+
+export function registerRuntimeCompiler(_compiler) {
+  compiler = _compiler;
 }

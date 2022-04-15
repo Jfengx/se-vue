@@ -16,3 +16,5 @@ export const EMPTY_OBJ = {};
 export const isArray = (val) => Array.isArray(val);
 
 export const isString = (val) => typeof val === 'string';
+
+export * from './toDisplayString';

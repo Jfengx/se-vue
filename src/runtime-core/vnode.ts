@@ -17,12 +17,15 @@ export type VNODE<HostElement = RendererNode> = {
 export type Component = {
   render(): VNODE;
   setup?: (props: any, context: { emit: (event: string, ...args: any[]) => void }) => unknown;
+  template?: string;
 };
 
 export type ComponentType = Component | string | symbol;
 
 export const Fragment = Symbol('Fragment');
 export const Text = Symbol('Text');
+
+export { createVNode as createElementVNode };
 
 export function createVNode<HostElement = RendererNode>(
   type: ComponentType,

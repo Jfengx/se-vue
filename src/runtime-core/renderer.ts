@@ -411,7 +411,7 @@ export function createRender<HostElement = RendererNode>(options: RenderOptions<
           console.log('Component -> init');
           const { proxy } = instance;
           // proxy 代理 setup 的返回值以及 $el $date ... 属性
-          const subTree = (instance.subTree = instance.render.call(proxy));
+          const subTree = (instance.subTree = instance.render.call(proxy, proxy));
           patch(null, subTree, container, instance, anchor);
           vnode.el = subTree.el;
           instance.isMounted = true;
@@ -425,7 +425,7 @@ export function createRender<HostElement = RendererNode>(options: RenderOptions<
           }
           const { proxy } = instance;
           // proxy 代理 setup 的返回值以及 $el $date ... 属性
-          const subTree = instance.render.call(proxy);
+          const subTree = instance.render.call(proxy, proxy);
           const prevTree = instance.subTree;
           instance.subTree = subTree;
           patch(prevTree, subTree, container, instance, anchor);

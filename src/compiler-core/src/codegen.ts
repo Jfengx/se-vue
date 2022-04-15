@@ -1,6 +1,5 @@
 import { NodeTypes, ASTNode } from './ast';
 import { helperMapName, TO_DISPLAY_STRING, CREATE_ELEMENT_VNODE } from './runtimeHelpers';
-import { AstNode } from './transform';
 import { isString } from '../../shared/index';
 
 type CodegenContext = {
@@ -23,7 +22,7 @@ function createCodegenContext(): CodegenContext {
   return context;
 }
 
-export function generate(ast: AstNode) {
+export function generate(ast: ASTNode) {
   const context = createCodegenContext();
   const { push } = context;
 
@@ -47,7 +46,7 @@ export function generate(ast: AstNode) {
 
 // 外部 helpers 引入
 // const { toDisplayString: _toDisplayString } = _Vue
-function genFunctionPreamble(ast: AstNode, context: CodegenContext) {
+function genFunctionPreamble(ast: ASTNode, context: CodegenContext) {
   const { push } = context;
   const VueBinging = 'Vue';
   const aliasHelper = (source: string) => `${helperMapName[source]}: _${helperMapName[source]}`;
